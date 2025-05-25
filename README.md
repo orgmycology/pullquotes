@@ -1,6 +1,6 @@
 # Pull Quotes
 
-A command-line tool for extracting and personalizing quotes from markdown documents.
+A command-line tool for extracting redacting quotes from markdown documents. We use this when we have developed a report, but want interviewees to have an opoprtunity to see how their quotes fit with the flow of the report. Each quotee gets a file with only their quotes and no quotes from other participants. 
 
 ## Overview
 
