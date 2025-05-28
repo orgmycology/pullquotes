@@ -3,7 +3,7 @@
 Pull Quotes - A tool for extracting and personalizing quotes from markdown documents.
 
 Usage:
-  python pull_quotes.py input_markdown_file.md [--fix] [--keep-names] [--test]
+  python pull_quotes.py input_markdown_file.md [--fix] [--keep-names] [--test] [--quotes-only]
 
 Arguments:
   input_markdown_file.md  - The markdown file to process
@@ -12,6 +12,7 @@ Arguments:
                            (default is to drop the name from redacted quotes)
   --test                  - Test mode: Only check for quotes and report findings
                            without generating output files
+  --quotes-only           - Also create a markdown file with just the extracted quotes
 
 Description:
   This script extracts quotes with attributions from a markdown file and creates
@@ -72,18 +73,20 @@ def extract_quotes(markdown_text):
     # Pattern to match quotes with attributions in parentheses
     # Handles various dash formats or no dash at all before the attribution
     # Looks for: opening quote, any text (non-greedy), ending with optional dash and (Name)
-    double_quote_pattern = r'"([^"]+)"\s*(?:[-–—]\s*)?\(([^)]+)\)'
+    # Also handles italic quotes with asterisks around them
+    double_quote_pattern = r'(?:\*"([^"]+)"\*|"([^"]+)")\s*(?:[-–—]\s*)?\(([^)]+)\)'
     
-    # Also handle single quotes
-    single_quote_pattern = r'\'([^\']+)\'\s*(?:[-–—]\s*)?\(([^)]+)\)'
+    # Also handle single quotes (with or without asterisks)
+    single_quote_pattern = r'(?:\*\'([^\']+)\'\*|\'([^\']+)\')\s*(?:[-–—]\s*)?\(([^)]+)\)'
     
     quotes = []
     suspected_quotes = []
     
     # Find standard double-quoted quotes
     for match in re.finditer(double_quote_pattern, markdown_text):
-        quote_text = match.group(1)
-        attribution = match.group(2)
+        # Handle both italic (*"text"*) and regular ("text") quotes
+        quote_text = match.group(1) if match.group(1) else match.group(2)
+        attribution = match.group(3)
         start_pos = match.start()
         end_pos = match.end()
         quotes.append({
@@ -96,8 +99,9 @@ def extract_quotes(markdown_text):
     
     # Find single-quoted quotes
     for match in re.finditer(single_quote_pattern, markdown_text):
-        quote_text = match.group(1)
-        attribution = match.group(2)
+        # Handle both italic (*'text'*) and regular ('text') quotes
+        quote_text = match.group(1) if match.group(1) else match.group(2)
+        attribution = match.group(3)
         start_pos = match.start()
         end_pos = match.end()
         quotes.append({
@@ -229,6 +233,33 @@ def extract_quotes(markdown_text):
                                         })
     
     return quotes, suspected_quotes
+
+def create_quotes_only_file(input_file, quotes):
+    """Create a markdown file containing only the extracted quotes.
+    
+    Args:
+        input_file: Path to the input markdown file
+        quotes: List of extracted quotes
+    """
+    base_name = os.path.splitext(input_file)[0]
+    output_file = f"{base_name}_quotes_only.md"
+    
+    # Group quotes by attribution for organized output
+    quotes_by_person = defaultdict(list)
+    for quote in quotes:
+        quotes_by_person[quote['attribution']].append(quote)
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write("# Extracted Quotes\n\n")
+        
+        for person in sorted(quotes_by_person.keys()):
+            f.write(f"## {person}\n\n")
+            person_quotes = quotes_by_person[person]
+            
+            for quote in person_quotes:
+                f.write(f'"{quote["text"]}" ({quote["attribution"]})\n\n')
+        
+    print(f"Created quotes-only file: {output_file}")
 
 def create_personalized_files(input_file, quotes, keep_names=False):
     """Create personalized markdown files for each unique attribution.
@@ -423,6 +454,7 @@ def main(args=None):
     fix_quotes = False
     keep_names = False
     test_mode = False
+    quotes_only = False
     
     # Check if first argument is a flag
     if args[0].startswith('--'):
@@ -443,6 +475,9 @@ def main(args=None):
         elif arg == '--test':
             test_mode = True
             print("Test mode enabled - will check for quotes without generating output files.")
+        elif arg == '--quotes-only':
+            quotes_only = True
+            print("Quotes-only mode enabled - will also create a file with just the extracted quotes.")
     
     # Check if file exists
     if not os.path.isfile(input_file):
@@ -487,7 +522,11 @@ def main(args=None):
         count = sum(1 for q in quotes if q['attribution'] == person)
         print(f"- {person}: {count} quotes")
     
-    # In test mode, we're done after reporting
+    # Create quotes-only file if requested (works in both test and normal mode)
+    if quotes_only:
+        create_quotes_only_file(input_file, quotes)
+    
+    # In test mode, we're done after reporting and potentially creating quotes-only file
     if test_mode:
         if suspected_quotes:
             print("\nTest mode: File contains quotes that need formatting. Please fix them or use --fix.")
