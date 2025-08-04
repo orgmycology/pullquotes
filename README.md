@@ -2,6 +2,8 @@
 
 A command-line tool for extracting redacting quotes from markdown documents. We use this when we have developed a report, but want interviewees to have an opoprtunity to see how their quotes fit with the flow of the report. Each quotee gets a file with only their quotes and no quotes from other participants. 
 
+Full disclosure: This tool was created using Antrhopic's Claude Coding assistant to test how basic general use small-tools can be used for qualitative research tasks.
+
 ## Overview
 
 Pull Quotes extracts attributed quotes from markdown documents and creates personalized versions where only quotes from a specific person are visible while others are redacted. This is useful for reviewing interview transcripts or creating personalized document versions for document approvals.
